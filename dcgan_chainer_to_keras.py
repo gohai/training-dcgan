@@ -25,7 +25,7 @@ import tensorflow as tf
 # Keras versions
 class CustomInit(tf.keras.initializers.Initializer):
 
-    def __init__(self, weight, name, transp=None):
+    def __init__(self, weight, name=None, transp=None):
       self.weight = weight
       self.name = name
       self.transp = transp
@@ -33,8 +33,10 @@ class CustomInit(tf.keras.initializers.Initializer):
     def __call__(self, shape, dtype=None):
       if self.transp is not None:
         return np.transpose(self.weight[self.name], self.transp)
-      else:
+      elif self.name is not None:
         return self.weight[self.name]
+      else:
+        return self.weight
 
     def get_config(self):  # To support serialization
       return {'weight': self.weight, 'name': self.name, 'transp':self.transp}
@@ -94,8 +96,8 @@ def _make_conv_2d(filters, kernel_size, strides, weight=None, kernel_arr_name=No
         strides=strides,
         padding='same',
         data_format='channels_first',
-        kernel_initializer=(lambda x: np.transpose(weight[kernel_arr_name], (2, 3, 1, 0))),
-        bias_initializer=(lambda x: weight[bias_arr_name]),
+        kernel_initializer=CustomInit(weight, kernel_arr_name, (2, 3, 1, 0)),
+        bias_initializer=CustomInit(weight, bias_arr_name),
     ) if weight else Conv2D(
         filters=filters,
         kernel_size=kernel_size,
@@ -155,7 +157,7 @@ def _make_upsampling_2d(ch, weight=None):
         # When weight is None, we can leave any standard initilizer
         # since weight would be later loaded, but we cannot leave any lambda
         # that tfjs would complain when it loads its weight.
-        kernel_initializer=(lambda x: kernel_matrix) if weight else keras.initializers.Zeros(),
+        kernel_initializer=CustomInit(kernel_matrix) if weight else keras.initializers.Zeros(),
         bias_initializer=keras.initializers.Zeros())
 
 
