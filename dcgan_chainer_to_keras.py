@@ -14,19 +14,38 @@ from keras.layers.core import Activation
 from keras.models import Sequential, Model
 from keras.layers import Input, Dense, Reshape, UpSampling2D, Add
 from keras.layers.convolutional import Conv2D, Conv2DTranspose
-from keras.layers.normalization import BatchNormalization
+from tensorflow.keras.layers import BatchNormalization
 import numpy as np
 from PIL import Image
 import tensorflowjs as tfjs
 import tensorflow as tf
+
+# Class for passing weights through an initializer, since
+# the lambda initializers don't work anymore with later
+# Keras versions
+class CustomInit(tf.keras.initializers.Initializer):
+
+    def __init__(self, weight, name, transp=None):
+      self.weight = weight
+      self.name = name
+      self.transp = transp
+
+    def __call__(self, shape, dtype=None):
+      if self.transp is not None:
+        return np.transpose(self.weight[self.name], self.transp)
+      else:
+        return self.weight[self.name]
+
+    def get_config(self):  # To support serialization
+      return {'weight': self.weight, 'name': self.name, 'transp':self.transp}
 
 
 def _make_dense(input_dim, units, weight=None, kernel_arr_name=None, bias_arr_name=None):
     return Dense(
         input_dim=input_dim,
         units=units,
-        kernel_initializer=(lambda x: np.transpose(weight[kernel_arr_name], (1, 0))),
-        bias_initializer=(lambda x: weight[bias_arr_name]),
+        kernel_initializer=CustomInit(weight, kernel_arr_name, (1, 0)),
+        bias_initializer=CustomInit(weight, bias_arr_name),
     ) if weight else Dense(
         input_dim=input_dim,
         units=units,
@@ -41,10 +60,10 @@ def _make_batch_normalizzation(axis,
                                moving_variance_arr_name=None):
     return BatchNormalization(
         axis=1,
-        beta_initializer=(lambda x: weight[beta_arr_name]),
-        gamma_initializer=(lambda x: weight[gamma_arr_name]),
-        moving_mean_initializer=(lambda x: weight[moving_mean_arr_name]),
-        moving_variance_initializer=(lambda x: weight[moving_variance_arr_name]),
+        beta_initializer=CustomInit(weight, beta_arr_name),
+        gamma_initializer=CustomInit(weight, gamma_arr_name),
+        moving_mean_initializer=CustomInit(weight, moving_mean_arr_name),
+        moving_variance_initializer=CustomInit(weight, moving_variance_arr_name),
     ) if weight else BatchNormalization(axis=axis)
 
 
@@ -56,8 +75,8 @@ def _make_conv_2d_transpose(filters, kernel_size, strides, weight=None, kernel_a
         strides=strides,
         padding='same',
         data_format='channels_first',
-        kernel_initializer=(lambda x: np.transpose(weight[kernel_arr_name], (2, 3, 1, 0))),
-        bias_initializer=(lambda x: weight[bias_arr_name]),
+        kernel_initializer=CustomInit(weight, kernel_arr_name, (2, 3, 1, 0)),
+        bias_initializer=CustomInit(weight,bias_arr_name),
     ) if weight else Conv2DTranspose(
         filters=filters,
         kernel_size=kernel_size,
