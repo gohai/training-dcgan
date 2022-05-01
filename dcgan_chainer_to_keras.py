@@ -299,24 +299,26 @@ def main(argv):
     generator = get_generator(weight=weight)
     print('Keras summary')
     generator.summary()
-    logging.info('Saving keras model (weights) to %s', FLAGS.keras_model_path)
-    generator.save_weights(FLAGS.keras_model_path)
+    logging.info('Saving keras model (weights) to %s', FLAGS.chainer_model_path)
+    generator.save_weights(FLAGS.chainer_model_path)
     del generator
     # this avoids lambda initilizers in generator, which whould cause error in tfjs.
     generator = get_generator()
-    generator.load_weights(FLAGS.keras_model_path)
-    generator.save_weights(FLAGS.keras_model_path)
+    generator.load_weights(FLAGS.chainer_model_path)
+    generator.save_weights(FLAGS.chainer_model_path)
 
     logging.info('Saving tensorflow.js model to %s', FLAGS.tfjs_model_path)
     os.system('mkdir -p "%s"' % FLAGS.tfjs_model_path)
     tfjs.converters.save_keras_model(generator, FLAGS.tfjs_model_path)
 
-    sample_output_dir = FLAGS.keras_model_path + '.sample'
-    logging.info('Sampling images, saving to %s', sample_output_dir)
-    os.system('mkdir -p "%s"' % sample_output_dir)
-    for index in range(10):
-        generate_images(generator, sample_output_dir, index)
+    print('done.')
 
+    # this part doesn't work ... but the model has already been saved <@:^)
+    # sample_output_dir = model_path + '.sample'
+    # logging.info('Sampling images, saving to %s', sample_output_dir)
+    # os.system('mkdir -p "%s"' % sample_output_dir)
+    # for index in range(10):
+    #     generate_images(generator, sample_output_dir, index)
 
 import pdb, traceback, sys, code  # noqa
 
